@@ -1,0 +1,94 @@
+---
+title: "Data Analysis"
+author: "Name Surname"
+knit: (function(inputFile, encoding) {
+    rmarkdown::render(inputFile, encoding = encoding, output_dir = "../Output/")
+  })
+---
+
+# Prep
+First load necessary packages to analyze your data.
+_Tips_: do not put 'install.package' functions in your code, only call the packages you need. If anyone does not have the necessary packages they can choose to install them. Re-installing packages every time is an unnecessary increase on the workload. 
+```{r, echo=TRUE}
+
+library(tidyverse)
+library(janitor)
+library(psych)
+
+```
+
+Now load in your data. Paths for loading in your data are relative to the project's root in this example which means that anyone who downloads the entire project can run this file without having to specify where the file is located on their own device.
+
+This file (Analysis.rmd) is found in the "Analysis" directory, which means you have to specify the path starting from one directory above, and you do it by starting the path name with "../".  
+
+```{r, echo=TRUE}
+#a good way to make sure no functions get called without proper library loaded is to call the finction directly from the package readr::read_csv
+data <- readr::read_csv("../Data/data.csv")
+```
+
+# Data cleaning
+
+Now that we have the raw data in, we can do data preparation and cleaning to prepare it for analyzing. 
+
+We can convert gender variable from numeric to factors.
+
+```{r}
+data <- data %>% mutate(gender = as.factor(gender))
+```
+
+
+# Analysis
+
+Let's analyze the data we have. The codebook specified which variables we have. 
+
+## Conduct a t-test
+Let's test if there's a significant difference in the score on observing between men and women.
+
+```{r}
+
+#filter data to choose only men and select the observing variable
+men <- data %>% filter(gender == 1) %>% .$observing
+
+#filter data to choose only women and select the observing variable
+women <- data %>% filter(gender == 2) %>% .$observing
+
+t_test_result <- t.test(men, women)
+print(t_test_result)
+```
+
+
+## Conduct a linear regression
+Let's model the relationship between acting and age of participants.
+
+``` {r}
+linear_regression_model <- lm(acting ~ age, data = data)
+summary(linear_regression_model)
+
+#plot the regression model
+ggplot2::ggplot(data, aes(x = age, y = acting)) + 
+  geom_point() +
+  stat_smooth(method = "lm")
+```
+
+## Conduct an exploratory factor analysis
+Let's conduct an exploratory factor analysis of the 39 questions of The Kentucky Inventory of Mindfulness Skills.
+```{r}
+
+#create a subset of the dataset by taking the 39 questions
+efa_data <- data %>% select(c(1:39))
+# Standardize the data (optional, but recommended)
+efa_data_std <- scale(efa_data)
+
+# Perform exploratory factor analysis
+# You'll need to specify the number of factors you want to extract (e.g., 2)
+efa_result <- psych::fa(efa_data_std, nfactors = 3, rotate = "varimax")
+
+# Print the results
+print(efa_result)
+
+loads <- efa_result$loadings
+
+#plot the factors
+fa.diagram(loads)
+```
+
